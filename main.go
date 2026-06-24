@@ -1,53 +1,18 @@
 package main
 
 import (
-	"errors"
-	"fmt"
+	"database/sql"
 	"log"
 	"os"
 
 	"github.com/kayrabulbul/gator/internal/config"
+	"github.com/kayrabulbul/gator/internal/database"
+	_ "github.com/lib/pq"
 )
 
 type state struct {
-	pntr *config.Config
-}
-
-type command struct {
-	name      string
-	arguments []string
-}
-
-type commands struct {
-	commandMap map[string]func(*state, command) error
-}
-
-func (c *commands) run(s *state, cmd command) error {
-	handler, ok := c.commandMap[cmd.name]
-	if !ok {
-		return fmt.Errorf("unknown command: %s", cmd.name)
-	}
-
-	return handler(s, cmd)
-}
-
-func (c *commands) register(name string, f func(*state, command) error) error {
-	c.commandMap[name] = f
-	return nil
-}
-
-func handlerLogin(s *state, cmd command) error {
-	if len(cmd.arguments) == 0 {
-		return errors.New("Username is required")
-	}
-
-	err := s.pntr.SetUser(cmd.arguments[0])
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("User set to %s", cmd.arguments[0])
-	return nil
+	db  *database.Queries
+	cfg *config.Config
 }
 
 func main() {
@@ -56,8 +21,21 @@ func main() {
 		log.Fatalf("Error reading config: %v", err)
 	}
 
-	appState := &state{&cfg}
+	dbURL := cfg.Connection_string
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatalf("Error opening database: %v", err)
+	}
+	dbQueries := database.New(db)
+
+	appState := &state{
+		db:  dbQueries,
+		cfg: &cfg,
+	}
 	appCommands := commands{make(map[string]func(*state, command) error)}
+	appCommands.register("login", handlerLogin)
+	appCommands.register("register", handlerRegister)
+
 	arguments := os.Args
 
 	if len(arguments) < 2 {
@@ -69,7 +47,6 @@ func main() {
 		arguments: arguments[2:],
 	}
 
-	appCommands.register("login", handlerLogin)
 	err = appCommands.run(appState, appCommand)
 	if err != nil {
 		log.Fatalf("Error running command: %v", err)

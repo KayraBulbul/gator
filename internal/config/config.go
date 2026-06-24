@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
 	"os"
 	"path/filepath"
 )
@@ -10,15 +9,7 @@ import (
 type Config struct {
 	Db_url            string `json:"db_url"`
 	Current_user_name string `json:"current_user_name"`
-}
-
-type state struct {
-	pntr *Config
-}
-
-type command struct {
-	name      string
-	arguments []string
+	Connection_string string `json:"connection_string"`
 }
 
 func getConfigFilepath() (string, error) {
@@ -75,12 +66,5 @@ func (c Config) SetUser(user string) error {
 		return err
 	}
 
-	return nil
-}
-
-func HandlerLogin(s *state, cmd command) error {
-	if len(cmd.arguments) == 0 {
-		return errors.New("No arugments")
-	}
 	return nil
 }
