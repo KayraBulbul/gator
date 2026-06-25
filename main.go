@@ -10,11 +10,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type state struct {
-	db  *database.Queries
-	cfg *config.Config
-}
-
 func main() {
 	cfg, err := config.Read()
 	if err != nil {
@@ -37,6 +32,7 @@ func main() {
 	appCommands.register("register", handlerRegister)
 	appCommands.register("reset", handlerReset)
 	appCommands.register("users", handlerUsers)
+	appCommands.register("agg", handleAgg)
 
 	arguments := os.Args
 

@@ -2,9 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/xml"
 	"errors"
 	"fmt"
+	"html"
+	"io"
 	"log"
+	"net/http"
 	"strings"
 	"time"
 
@@ -81,6 +85,57 @@ func handlerUsers(s *state, cmd command) error {
 		} else {
 			fmt.Printf("* %s\n", user.Name)
 		}
+	}
+	return nil
+}
+
+func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
+	// Make request variable
+	req, err := http.NewRequestWithContext(ctx, "GET", feedURL, &strings.Reader{})
+	if err != nil {
+		return &RSSFeed{}, err
+	}
+
+	req.Header.Set("User-Agent", "gator")
+
+	// Get response
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		return &RSSFeed{}, err
+	}
+	defer res.Body.Close() // Close body after function ends
+
+	// Read body to unmarshal
+	b, err := io.ReadAll(res.Body)
+	if err != nil {
+		return &RSSFeed{}, err
+	}
+
+	// Unmarshal into xmlData
+	var xmlData RSSFeed
+	if err = xml.Unmarshal(b, &xmlData); err != nil {
+		return &RSSFeed{}, err
+	}
+
+	return &xmlData, nil
+}
+
+func handleAgg(s *state, cmd command) error {
+	feed, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(html.UnescapeString(feed.Channel.Title))
+	fmt.Println(feed.Channel.Link)
+	fmt.Println(html.UnescapeString(feed.Channel.Description))
+
+	for _, item := range feed.Channel.Item {
+		fmt.Println(html.UnescapeString(item.Title))
+		fmt.Println(item.Link)
+		fmt.Println(html.UnescapeString(item.Description))
+		fmt.Println(item.PubDate)
 	}
 	return nil
 }
