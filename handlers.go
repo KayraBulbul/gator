@@ -124,7 +124,7 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	return &xmlData, nil
 }
 
-func handleAgg(s *state, cmd command) error {
+func handlerAgg(s *state, cmd command) error {
 	feed, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
 	if err != nil {
 		return err
@@ -139,6 +139,59 @@ func handleAgg(s *state, cmd command) error {
 		fmt.Println(item.Link)
 		fmt.Println(html.UnescapeString(item.Description))
 		fmt.Println(item.PubDate)
+	}
+	return nil
+}
+
+func addFeed(s *state, cmd command) error {
+	// validate arguments
+	if len(cmd.arguments) != 2 {
+		log.Fatal("Not enough arguments")
+	}
+	name := cmd.arguments[0]
+	url := cmd.arguments[1]
+
+	// get current user
+	currentUsername := s.cfg.Current_user_name
+	currentUser, err := s.db.GetUser(context.Background(), currentUsername)
+	if err != nil {
+		return err
+	}
+
+	params := database.CreateFeedParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name:      name,
+		Url:       url,
+		UserID:    currentUser.ID,
+	}
+
+	feed, err := s.db.CreateFeed(context.Background(), params)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(feed.ID)
+	fmt.Println(feed.CreatedAt)
+	fmt.Println(feed.UpdatedAt)
+	fmt.Println(feed.Name)
+	fmt.Println(feed.Url)
+	fmt.Println(feed.UserID)
+	return nil
+}
+
+func handlerFeeds(s *state, cmd command) error {
+	feeds, err := s.db.GetFeeds(context.Background())
+	if err != nil {
+		return err
+	}
+
+	for _, feed := range feeds {
+		fmt.Println(feed.Feedname)
+		fmt.Println(feed.Url)
+		fmt.Println(feed.Username)
+
 	}
 	return nil
 }

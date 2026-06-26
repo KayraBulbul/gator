@@ -46,9 +46,17 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error registering users: %v", err)
 	}
-	err = appCommands.register("agg", handleAgg)
+	err = appCommands.register("agg", handlerAgg)
 	if err != nil {
 		log.Fatalf("Error registering agg: %v", err)
+	}
+	err = appCommands.register("addfeed", addFeed)
+	if err != nil {
+		log.Fatalf("Error registering addfeed: %v", err)
+	}
+	err = appCommands.register("feeds", handlerFeeds)
+	if err != nil {
+		log.Fatalf("Error registering feeds: %v", err)
 	}
 
 	arguments := os.Args
