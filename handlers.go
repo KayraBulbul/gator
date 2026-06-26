@@ -18,7 +18,7 @@ import (
 
 func handlerLogin(s *state, cmd command) error {
 	if len(cmd.arguments) == 0 {
-		return errors.New("Username is required")
+		return errors.New("username is required")
 	}
 
 	name := strings.ToLower(cmd.arguments[0])
@@ -38,7 +38,7 @@ func handlerLogin(s *state, cmd command) error {
 
 func handlerRegister(s *state, cmd command) error {
 	if len(cmd.arguments) == 0 {
-		return errors.New("User is required")
+		return errors.New("user is required")
 	}
 
 	name := strings.ToLower(cmd.arguments[0])
@@ -53,9 +53,12 @@ func handlerRegister(s *state, cmd command) error {
 		Name:      name,
 	}
 
-	s.db.CreateUser(context.Background(), params)
+	_, err := s.db.CreateUser(context.Background(), params)
+	if err != nil {
+		return err
+	}
 
-	err := s.cfg.SetUser(cmd.arguments[0])
+	err = s.cfg.SetUser(cmd.arguments[0])
 	if err != nil {
 		return err
 	}
@@ -98,7 +101,7 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 
 	req.Header.Set("User-Agent", "gator")
 
-	// Get response
+	// Get the response
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {

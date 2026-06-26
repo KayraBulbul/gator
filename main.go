@@ -28,11 +28,28 @@ func main() {
 		cfg: &cfg,
 	}
 	appCommands := commands{make(map[string]func(*state, command) error)}
-	appCommands.register("login", handlerLogin)
-	appCommands.register("register", handlerRegister)
-	appCommands.register("reset", handlerReset)
-	appCommands.register("users", handlerUsers)
-	appCommands.register("agg", handleAgg)
+
+	// register commands
+	err = appCommands.register("login", handlerLogin)
+	if err != nil {
+		log.Fatalf("Error registering login: %v", err)
+	}
+	err = appCommands.register("register", handlerRegister)
+	if err != nil {
+		log.Fatalf("Error registering register: %v", err)
+	}
+	err = appCommands.register("reset", handlerReset)
+	if err != nil {
+		log.Fatalf("Error registering reset: %v", err)
+	}
+	err = appCommands.register("users", handlerUsers)
+	if err != nil {
+		log.Fatalf("Error registering users: %v", err)
+	}
+	err = appCommands.register("agg", handleAgg)
+	if err != nil {
+		log.Fatalf("Error registering agg: %v", err)
+	}
 
 	arguments := os.Args
 
