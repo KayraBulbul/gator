@@ -58,6 +58,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error registering feeds: %v", err)
 	}
+	err = appCommands.register("follow", handlerFollow)
+	if err != nil {
+		log.Fatalf("Error registering follow: %v", err)
+	}
+	err = appCommands.register("following", handlerFollowing)
+	if err != nil {
+		log.Fatalf("Error registering following: %v", err)
+	}
 
 	arguments := os.Args
 
