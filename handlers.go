@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -124,8 +125,18 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	return &xmlData, nil
 }
 
-func handlerAgg(s *state, cmd command) error {
-	feed, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+func scrapeFeeds(s *state) error {
+	dbFeed, err := s.db.GetNextFeedToFetch(context.Background())
+	if err != nil {
+		return err
+	}
+
+	err = s.db.MarkFeedFetched(context.Background(), dbFeed.ID)
+	if err != nil {
+		return err
+	}
+
+	feed, err := fetchFeed(context.Background(), dbFeed.Url)
 	if err != nil {
 		return err
 	}
@@ -143,6 +154,27 @@ func handlerAgg(s *state, cmd command) error {
 	return nil
 }
 
+func handlerAgg(s *state, cmd command) error {
+	if len(cmd.arguments) != 1 {
+		return errors.New("no argument provided")
+	}
+	timer := cmd.arguments[0]
+
+	timeBetweenReqs, err := time.ParseDuration(timer)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Collecting feeds every %s\n", timer)
+	ticker := time.NewTicker(timeBetweenReqs)
+	for ; ; <-ticker.C {
+		err = scrapeFeeds(s)
+		if err != nil {
+			return err
+		}
+	}
+}
+
 func handlerAddFeed(s *state, cmd command, user database.User) error {
 	// validate arguments
 	if len(cmd.arguments) != 2 {
@@ -152,12 +184,13 @@ func handlerAddFeed(s *state, cmd command, user database.User) error {
 	url := cmd.arguments[1]
 
 	FeedParams := database.CreateFeedParams{
-		ID:        uuid.New(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		Name:      name,
-		Url:       url,
-		UserID:    user.ID,
+		ID:            uuid.New(),
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+		Name:          name,
+		Url:           url,
+		UserID:        user.ID,
+		LastFetchedAt: sql.NullTime{Valid: false},
 	}
 
 	feed, err := s.db.CreateFeed(context.Background(), FeedParams)
@@ -203,7 +236,7 @@ func handlerFeeds(s *state, cmd command) error {
 
 func handlerFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.arguments) != 1 {
-		return errors.New("Need URL argument")
+		return errors.New("need URL argument")
 	}
 
 	url := cmd.arguments[0]
