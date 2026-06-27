@@ -70,6 +70,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error registering unfollow: %v", err)
 	}
+	err = appCommands.register("browse", handlerBrowse)
+	if err != nil {
+		log.Fatalf("Error registering browse: %v", err)
+	}
 
 	arguments := os.Args
 

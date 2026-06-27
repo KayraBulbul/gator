@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -97,7 +98,7 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	// Make request variable
 	req, err := http.NewRequestWithContext(ctx, "GET", feedURL, &strings.Reader{})
 	if err != nil {
-		return &RSSFeed{}, err
+		return &RSSFeed{}, errors.New("error making request")
 	}
 
 	req.Header.Set("User-Agent", "gator")
@@ -106,20 +107,20 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		return &RSSFeed{}, err
+		return &RSSFeed{}, errors.New("error getting response")
 	}
 	defer res.Body.Close() // Close body after function ends
 
 	// Read body to unmarshal
 	b, err := io.ReadAll(res.Body)
 	if err != nil {
-		return &RSSFeed{}, err
+		return &RSSFeed{}, errors.New("error reading response body")
 	}
 
 	// Unmarshal into xmlData
 	var xmlData RSSFeed
 	if err = xml.Unmarshal(b, &xmlData); err != nil {
-		return &RSSFeed{}, err
+		return &RSSFeed{}, errors.New("error unmarshaling data")
 	}
 
 	return &xmlData, nil
@@ -128,12 +129,12 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 func scrapeFeeds(s *state) error {
 	dbFeed, err := s.db.GetNextFeedToFetch(context.Background())
 	if err != nil {
-		return err
+		return errors.New("error getting next feed")
 	}
 
 	err = s.db.MarkFeedFetched(context.Background(), dbFeed.ID)
 	if err != nil {
-		return err
+		return errors.New("error marking feed fetched")
 	}
 
 	feed, err := fetchFeed(context.Background(), dbFeed.Url)
@@ -141,15 +142,35 @@ func scrapeFeeds(s *state) error {
 		return err
 	}
 
-	fmt.Println(html.UnescapeString(feed.Channel.Title))
-	fmt.Println(feed.Channel.Link)
-	fmt.Println(html.UnescapeString(feed.Channel.Description))
-
 	for _, item := range feed.Channel.Item {
-		fmt.Println(html.UnescapeString(item.Title))
-		fmt.Println(item.Link)
-		fmt.Println(html.UnescapeString(item.Description))
-		fmt.Println(item.PubDate)
+		PublishedAt, err := time.Parse(time.RFC1123Z, item.PubDate)
+		if err != nil {
+			return errors.New("error parsing date")
+		}
+
+		params := database.CreatePostParams{
+			ID:          uuid.New(),
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+			Title:       html.UnescapeString(item.Title),
+			Url:         item.Link,
+			Description: html.UnescapeString(item.Description),
+			PublishedAt: sql.NullTime{
+				Time:  PublishedAt,
+				Valid: true,
+			},
+			FeedID: dbFeed.ID,
+		}
+
+		err = s.db.CreatePost(context.Background(), params)
+		if err != nil {
+			if strings.Contains(err.Error(), "23505") {
+				continue
+			}
+			return errors.New("error creating post")
+		}
+
+		fmt.Printf("Post for %s was created.\n", html.UnescapeString(item.Title))
 	}
 	return nil
 }
@@ -294,6 +315,28 @@ func handlerUnfollow(s *state, cmd command, user database.User) error {
 	err = s.db.DeleteFollow(context.Background(), params)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func handlerBrowse(s *state, cmd command) error {
+	var limit int32 = 2
+	if len(cmd.arguments) == 1 {
+		parsedLimit, err := strconv.ParseInt(cmd.arguments[0], 10, 32)
+		if err != nil {
+			return err
+		}
+
+		limit = int32(parsedLimit)
+	}
+
+	posts, err := s.db.GetPostForUser(context.Background(), limit)
+	if err != nil {
+		return err
+	}
+
+	for _, post := range posts {
+		fmt.Println(post)
 	}
 	return nil
 }
