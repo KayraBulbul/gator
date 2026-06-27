@@ -203,7 +203,7 @@ func handlerFeeds(s *state, cmd command) error {
 
 func handlerFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.arguments) != 1 {
-		log.Fatal("Need URL")
+		return errors.New("Need URL argument")
 	}
 
 	url := cmd.arguments[0]
@@ -240,6 +240,27 @@ func handlerFollowing(s *state, cmd command) error {
 
 	for _, feed := range feedFollows {
 		fmt.Println(feed.FeedName)
+	}
+	return nil
+}
+
+func handlerUnfollow(s *state, cmd command, user database.User) error {
+	if len(cmd.arguments) != 1 {
+		return errors.New("need URL argument")
+	}
+	feedURL := cmd.arguments[0]
+	feed, err := s.db.GetFeedByURL(context.Background(), feedURL)
+	if err != nil {
+		return err
+	}
+
+	params := database.DeleteFollowParams{
+		UserID: user.ID,
+		FeedID: feed.ID,
+	}
+	err = s.db.DeleteFollow(context.Background(), params)
+	if err != nil {
+		return err
 	}
 	return nil
 }

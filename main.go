@@ -66,6 +66,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error registering following: %v", err)
 	}
+	err = appCommands.register("unfollow", middlewareLoggedIn(handlerUnfollow))
+	if err != nil {
+		log.Fatalf("Error registering unfollow: %v", err)
+	}
 
 	arguments := os.Args
 
