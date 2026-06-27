@@ -50,7 +50,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error registering agg: %v", err)
 	}
-	err = appCommands.register("addfeed", addFeed)
+	err = appCommands.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	if err != nil {
 		log.Fatalf("Error registering addfeed: %v", err)
 	}
@@ -58,7 +58,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error registering feeds: %v", err)
 	}
-	err = appCommands.register("follow", handlerFollow)
+	err = appCommands.register("follow", middlewareLoggedIn(handlerFollow))
 	if err != nil {
 		log.Fatalf("Error registering follow: %v", err)
 	}

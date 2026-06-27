@@ -143,7 +143,7 @@ func handlerAgg(s *state, cmd command) error {
 	return nil
 }
 
-func addFeed(s *state, cmd command) error {
+func handlerAddFeed(s *state, cmd command, user database.User) error {
 	// validate arguments
 	if len(cmd.arguments) != 2 {
 		log.Fatal("Not enough arguments")
@@ -151,20 +151,13 @@ func addFeed(s *state, cmd command) error {
 	name := cmd.arguments[0]
 	url := cmd.arguments[1]
 
-	// get current user
-	currentUsername := s.cfg.Current_user_name
-	currentUser, err := s.db.GetUser(context.Background(), currentUsername)
-	if err != nil {
-		return err
-	}
-
 	FeedParams := database.CreateFeedParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 		Name:      name,
 		Url:       url,
-		UserID:    currentUser.ID,
+		UserID:    user.ID,
 	}
 
 	feed, err := s.db.CreateFeed(context.Background(), FeedParams)
@@ -176,7 +169,7 @@ func addFeed(s *state, cmd command) error {
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
-		UserID:    currentUser.ID,
+		UserID:    user.ID,
 		FeedID:    feed.ID,
 	}
 
@@ -208,7 +201,7 @@ func handlerFeeds(s *state, cmd command) error {
 	return nil
 }
 
-func handlerFollow(s *state, cmd command) error {
+func handlerFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.arguments) != 1 {
 		log.Fatal("Need URL")
 	}
@@ -216,11 +209,6 @@ func handlerFollow(s *state, cmd command) error {
 	url := cmd.arguments[0]
 
 	feed, err := s.db.GetFeedByURL(context.Background(), url)
-	if err != nil {
-		return err
-	}
-
-	user, err := s.db.GetUser(context.Background(), s.cfg.Current_user_name)
 	if err != nil {
 		return err
 	}
