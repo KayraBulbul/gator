@@ -2,6 +2,8 @@
 
 Gator is a command-line RSS/blog aggregator written in Go. It lets users register, add RSS feeds, follow feeds, fetch posts from those feeds, and browse recent posts from a PostgreSQL database.
 
+I posted devlogs during the process of building this project, you can view them [here](https://kayrabulbul.dev/devlog)
+
 ## Requirements
 
 To run Gator, you need:
